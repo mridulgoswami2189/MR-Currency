@@ -115,3 +115,10 @@ add_action('plugins_loaded', function () {
         if (file_exists($path)) require_once $path;
     }
 }, 1);
+
+add_action('plugins_loaded', function () {
+    foreach (['includes/admin.php', 'includes/rates.php', 'includes/pricing.php', 'includes/geo.php', 'includes/checkout.php'] as $rel) {
+        $path = MRWCMC_PATH . $rel;
+        if (file_exists($path)) require_once $path;
+    }
+}, 1);
