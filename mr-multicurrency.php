@@ -19,23 +19,23 @@ if (!defined('ABSPATH')) {
 /*-----------------------------------------------------------------------------
  * Constants
  *---------------------------------------------------------------------------*/
-define('WCMC_VERSION', '0.1.0');
-define('WCMC_FILE', __FILE__);
-define('WCMC_PATH', plugin_dir_path(__FILE__));
-define('WCMC_URL', plugin_dir_url(__FILE__));
+define('MRWCMC_VERSION', '0.1.0');
+define('MRWCMC_FILE', __FILE__);
+define('MRWCMC_PATH', plugin_dir_path(__FILE__));
+define('MRWCMC_URL', plugin_dir_url(__FILE__));
 
 /*-----------------------------------------------------------------------------
  * Helpers
  *---------------------------------------------------------------------------*/
-if (!function_exists('wcmc_wc_active')) {
-    function wcmc_wc_active()
+if (!function_exists('MRWCMC_wc_active')) {
+    function MRWCMC_wc_active()
     {
         return class_exists('WooCommerce') || defined('WC_VERSION');
     }
 }
 
-if (!function_exists('wcmc_defaults')) {
-    function wcmc_defaults()
+if (!function_exists('MRWCMC_defaults')) {
+    function MRWCMC_defaults()
     {
         $base = get_option('woocommerce_currency', 'USD');
         return array(
@@ -57,8 +57,8 @@ if (!function_exists('wcmc_defaults')) {
  * Activation: seed defaults
  *---------------------------------------------------------------------------*/
 register_activation_hook(__FILE__, function () {
-    if (!get_option('wcmc_settings')) {
-        add_option('wcmc_settings', wcmc_defaults(), '', false);
+    if (!get_option('MRWCMC_settings')) {
+        add_option('MRWCMC_settings', MRWCMC_defaults(), '', false);
     }
 });
 
@@ -67,7 +67,7 @@ register_activation_hook(__FILE__, function () {
  *---------------------------------------------------------------------------*/
 add_action('admin_notices', function () {
     if (!current_user_can('activate_plugins')) return;
-    if (!wcmc_wc_active()) {
+    if (!MRWCMC_wc_active()) {
         echo '<div class="notice notice-error"><p>' .
             esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'wc-multicurrency') .
             '</p></div>';
@@ -78,7 +78,7 @@ add_action('admin_notices', function () {
  * Bootstrap
  *---------------------------------------------------------------------------*/
 add_action('plugins_loaded', function () {
-    if (!wcmc_wc_active()) return;
+    if (!MRWCMC_wc_active()) return;
 
     // i18n
     load_plugin_textdomain('wc-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
@@ -95,7 +95,7 @@ add_action('plugins_loaded', function () {
  */
 add_action('init', function () {
     if (is_admin()) {
-        $admin_file = WCMC_PATH . 'includes/admin.php';
+        $admin_file = MRWCMC_PATH . 'includes/admin.php';
         if (file_exists($admin_file)) {
             require_once $admin_file;
         }
