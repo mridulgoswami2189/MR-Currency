@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: MR WooCommerce Multi-Currency (MRWCMC)
  * Description: Detects user geo-location and switches currency with auto/manual rates and per-currency markup.
@@ -11,7 +12,9 @@
  * WC tested up to: 9.0
  */
 
-if (!defined('ABSPATH')) { exit; }
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 /*-----------------------------------------------------------------------------
  * Constants
@@ -25,13 +28,15 @@ define('MRWCMC_URL', plugin_dir_url(__FILE__));
  * Helpers
  *---------------------------------------------------------------------------*/
 if (!function_exists('mrwcmc_wc_active')) {
-    function mrwcmc_wc_active() {
+    function mrwcmc_wc_active()
+    {
         return class_exists('WooCommerce') || defined('WC_VERSION');
     }
 }
 
 if (!function_exists('mrwcmc_defaults')) {
-    function mrwcmc_defaults() {
+    function mrwcmc_defaults()
+    {
         $base = get_option('woocommerce_currency', 'USD');
         return array(
             'enabled'               => false,
@@ -64,8 +69,8 @@ add_action('admin_notices', function () {
     if (!current_user_can('activate_plugins')) return;
     if (!mrwcmc_wc_active()) {
         echo '<div class="notice notice-error"><p>' .
-             esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'mr-multicurrency') .
-             '</p></div>';
+            esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'mr-multicurrency') .
+            '</p></div>';
     }
 });
 
@@ -96,3 +101,10 @@ add_action('init', function () {
         }
     }
 }, 0);
+
+add_action('plugins_loaded', function () {
+    foreach (['includes/rates.php', 'includes/pricing.php'] as $rel) {
+        $path = MRWCMC_PATH . $rel;
+        if (file_exists($path)) require_once $path;
+    }
+}, 1);
