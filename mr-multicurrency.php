@@ -89,35 +89,17 @@ add_action('plugins_loaded', function () {
     // - geo detection + pricing filters
 });
 
-/**
- * Optionally load admin file later when it exists
- * (we’ll add includes/admin.php in the next step).
- */
-add_action('init', function () {
-    if (is_admin()) {
-        $admin_file = MRWCMC_PATH . 'includes/admin.php';
-        if (file_exists($admin_file)) {
-            require_once $admin_file;
-        }
-    }
-}, 0);
-
 add_action('plugins_loaded', function () {
-    foreach (['includes/rates.php', 'includes/pricing.php'] as $rel) {
-        $path = MRWCMC_PATH . $rel;
-        if (file_exists($path)) require_once $path;
-    }
-}, 1);
-
-add_action('plugins_loaded', function () {
-    foreach (['includes/admin.php', 'includes/rates.php', 'includes/pricing.php', 'includes/geo.php'] as $rel) {
-        $path = MRWCMC_PATH . $rel;
-        if (file_exists($path)) require_once $path;
-    }
-}, 1);
-
-add_action('plugins_loaded', function () {
-    foreach (['includes/admin.php', 'includes/rates.php', 'includes/pricing.php', 'includes/geo.php', 'includes/checkout.php'] as $rel) {
+    foreach (
+        [
+            'includes/admin.php',
+            'includes/rates.php',
+            'includes/pricing.php',
+            'includes/geo.php',
+            'includes/checkout.php',
+            'includes/switcher.php', // ← NEW
+        ] as $rel
+    ) {
         $path = MRWCMC_PATH . $rel;
         if (file_exists($path)) require_once $path;
     }
