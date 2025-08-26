@@ -339,6 +339,49 @@ if (!function_exists('mrwcmc_field_allow_switch')) {
             <input type="checkbox" name="mrwcmc_settings[allow_user_switch]" value="1" <?php checked($opt['allow_user_switch']); ?> />
             <?php echo esc_html__('Allow shoppers to switch currency (shortcode/widget coming next).', 'mr-multicurrency'); ?>
         </label>
+    <?php
+    }
+}
+// Geo provider select
+if (!function_exists('mrwcmc_field_geo_provider')) {
+    function mrwcmc_field_geo_provider()
+    {
+        $opt = mrwcmc_get_option();
+        $val = isset($opt['geo_provider']) ? $opt['geo_provider'] : 'auto';
+    ?>
+        <select name="mrwcmc_settings[geo_provider]">
+            <option value="auto" <?php selected($val, 'auto'); ?>>
+                <?php echo esc_html__('Auto (Cloudflare → WooCommerce → ipinfo)', 'mr-multicurrency'); ?>
+            </option>
+            <option value="ipinfo" <?php selected($val, 'ipinfo'); ?>>
+                <?php echo esc_html__('ipinfo (token recommended)', 'mr-multicurrency'); ?>
+            </option>
+            <option value="wc" <?php selected($val, 'wc'); ?>>
+                <?php echo esc_html__('WooCommerce Geolocation / MaxMind', 'mr-multicurrency'); ?>
+            </option>
+            <option value="cloudflare" <?php selected($val, 'cloudflare'); ?>>
+                <?php echo esc_html__('Cloudflare header only', 'mr-multicurrency'); ?>
+            </option>
+        </select>
+        <p class="description">
+            <?php echo esc_html__('Choose where we read the visitor country from.', 'mr-multicurrency'); ?>
+        </p>
+    <?php
+    }
+}
+
+// ipinfo token text box
+if (!function_exists('mrwcmc_field_ipinfo_token')) {
+    function mrwcmc_field_ipinfo_token()
+    {
+        $opt = mrwcmc_get_option();
+        $val = isset($opt['ipinfo_token']) ? $opt['ipinfo_token'] : '';
+    ?>
+        <input type="text" name="mrwcmc_settings[ipinfo_token]" style="width:320px"
+            value="<?php echo esc_attr($val); ?>" placeholder="eg. 1234567890abcdef" />
+        <p class="description">
+            <?php echo esc_html__('Optional but recommended for production. Create a token at ipinfo.io and paste it here.', 'mr-multicurrency'); ?>
+        </p>
 <?php
     }
 }
