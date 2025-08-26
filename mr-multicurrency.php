@@ -105,3 +105,22 @@ add_action('plugins_loaded', function () {
         if (file_exists($path)) require_once $path;
     }
 }, 1);
+
+// HPOS (High-Performance Order Storage) compatibility declaration
+add_action('before_woocommerce_init', function () {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        // Declare compatibility with custom order tables (HPOS)
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+            'custom_order_tables',
+            __FILE__,
+            true
+        );
+
+        // OPTIONAL: if you plan to support Cart/Checkout Blocks explicitly
+        // \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+        //     'cart_checkout_blocks',
+        //     __FILE__,
+        //     true
+        // );
+    }
+});
