@@ -1,20 +1,17 @@
 <?php
-
 /**
- * Plugin Name: MR Multi‑Currency
+ * Plugin Name: MR WooCommerce Multi-Currency (MRWCMC)
  * Description: Detects user geo-location and switches currency with auto/manual rates and per-currency markup.
  * Author: Mridul & Rohan
  * Version: 0.1.0
  * Requires at least: 6.0
- * Requires PHP: 8.3
+ * Requires PHP: 7.4
  * Text Domain: mr-multicurrency
  * Domain Path: /languages
  * WC tested up to: 9.0
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) { exit; }
 
 /*-----------------------------------------------------------------------------
  * Constants
@@ -27,16 +24,14 @@ define('MRWCMC_URL', plugin_dir_url(__FILE__));
 /*-----------------------------------------------------------------------------
  * Helpers
  *---------------------------------------------------------------------------*/
-if (!function_exists('MRWCMC_wc_active')) {
-    function MRWCMC_wc_active()
-    {
+if (!function_exists('mrwcmc_wc_active')) {
+    function mrwcmc_wc_active() {
         return class_exists('WooCommerce') || defined('WC_VERSION');
     }
 }
 
-if (!function_exists('MRWCMC_defaults')) {
-    function MRWCMC_defaults()
-    {
+if (!function_exists('mrwcmc_defaults')) {
+    function mrwcmc_defaults() {
         $base = get_option('woocommerce_currency', 'USD');
         return array(
             'enabled'               => false,
@@ -57,8 +52,8 @@ if (!function_exists('MRWCMC_defaults')) {
  * Activation: seed defaults
  *---------------------------------------------------------------------------*/
 register_activation_hook(__FILE__, function () {
-    if (!get_option('MRWCMC_settings')) {
-        add_option('MRWCMC_settings', MRWCMC_defaults(), '', false);
+    if (!get_option('mrwcmc_settings')) {
+        add_option('mrwcmc_settings', mrwcmc_defaults(), '', false);
     }
 });
 
@@ -67,10 +62,10 @@ register_activation_hook(__FILE__, function () {
  *---------------------------------------------------------------------------*/
 add_action('admin_notices', function () {
     if (!current_user_can('activate_plugins')) return;
-    if (!MRWCMC_wc_active()) {
+    if (!mrwcmc_wc_active()) {
         echo '<div class="notice notice-error"><p>' .
-            esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'wc-multicurrency') .
-            '</p></div>';
+             esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'mr-multicurrency') .
+             '</p></div>';
     }
 });
 
@@ -78,10 +73,10 @@ add_action('admin_notices', function () {
  * Bootstrap
  *---------------------------------------------------------------------------*/
 add_action('plugins_loaded', function () {
-    if (!MRWCMC_wc_active()) return;
+    if (!mrwcmc_wc_active()) return;
 
     // i18n
-    load_plugin_textdomain('wc-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
+    load_plugin_textdomain('mr-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
 
     // Future steps will add:
     // - admin settings (separate file)
