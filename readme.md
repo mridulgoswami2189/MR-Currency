@@ -76,9 +76,10 @@ mr-multicurrency/
 
 ## Quick Start
 
-1) **WooCommerce → Multi-Currency**  
-   - ✅ **Enable multi-currency**  
-   - **Supported currencies** → include all you’ll offer  
+1. **WooCommerce → Multi-Currency**
+
+   - ✅ **Enable multi-currency**
+   - **Supported currencies** → include all you’ll offer
    - **Country → Currency map** (one per line):
      ```text
      US=USD
@@ -87,32 +88,36 @@ mr-multicurrency/
      IN=INR
      *=USD
      ```
-   - **Rate provider** → `Frankfurter (ECB)` or `exchangerate.host`  
+   - **Rate provider** → `Frankfurter (ECB)` or `exchangerate.host`
    - **Rate refresh** → `Daily` (or Hourly/Twice Daily)
 
-2) *(Optional)* **Manual rates** (override auto):
+2. _(Optional)_ **Manual rates** (override auto):
+
    ```text
    EUR=0.91
    INR=84.30
    ```
 
-3) *(Optional)* **Markup** (per currency):
+3. _(Optional)_ **Markup** (per currency):
+
    ```text
    EUR=%:3.0
    INR=fixed:5
    ```
 
-4) *(Optional)* **Rounding (decimals)**:
+4. _(Optional)_ **Rounding (decimals)**:
+
    ```text
    JPY=0
    INR=2
    ```
 
-5) *(Optional)* **Geo provider**  
-   - **Geo provider** → `Auto` (Cloudflare → Woo → ipinfo)  
+5. _(Optional)_ **Geo provider**
+
+   - **Geo provider** → `Auto` (Cloudflare → Woo → ipinfo)
    - **ipinfo token** (free tier token recommended)
 
-6) Add a **switcher** to a page or header:
+6. Add a **switcher** to a page or header:
    ```text
    [mrwcmc_switcher]                # dropdown (posts & reloads)
    [mrwcmc_switcher type="links"]   # inline links (JS posts; no-JS uses ?mrwcmc= fallback)
@@ -123,17 +128,20 @@ mr-multicurrency/
 ## How It Works
 
 **Selection precedence**
-1. **Manual selection** via POST (dropdown) or **query param** `?mrwcmc=XYZ` (links/no-JS)  
-2. Existing **cookie** `mrwcmc_currency` (30 days)  
-3. **Geo**: resolve country → map to currency (if supported)  
+
+1. **Manual selection** via POST (dropdown) or **query param** `?mrwcmc=XYZ` (links/no-JS)
+2. Existing **cookie** `mrwcmc_currency` (30 days)
+3. **Geo**: resolve country → map to currency (if supported)
 4. WooCommerce **base currency**
 
 **Rates**
+
 - Pulls from chosen provider; cached per schedule.
 - **Manual rates** override auto rates for listed codes.
 - Conversion applies **markup** and **rounding** per currency.
 
 **Variable products**
+
 - Cache hash varies by current currency.
 - Variation price arrays & direct reads are converted.
 
@@ -141,19 +149,19 @@ mr-multicurrency/
 
 ## Settings Reference
 
-| Setting | Key | Notes |
-|---|---|---|
-| Enable multi-currency | `enabled` | Master switch |
-| Supported currencies | `supported_currencies[]` | Uppercase ISO-4217 |
-| Country → Currency map | `country_currency_map_raw` | Lines `CC=CUR`; include fallback `*=CUR` |
-| Rate provider | `rate_provider` | `frankfurter` \| `exchangeratehost` |
-| Rate refresh | `rate_refresh` | `manual` \| `hourly` \| `twicedaily` \| `daily` |
-| Manual rates | `manual_rates_raw` | Lines `CUR=rate` (relative to base) |
-| Markup | `markup_raw` | `CUR=%:X` or `CUR=fixed:X` |
-| Rounding (decimals) | `rounding_raw` | `CUR=N` (e.g., `JPY=0`) |
-| Allow user switch | `allow_user_switch` | Enables switcher UI |
-| Geo provider | `geo_provider` | `auto` \| `ipinfo` \| `wc` \| `cloudflare` |
-| ipinfo token | `ipinfo_token` | Optional token for ipinfo API |
+| Setting                | Key                        | Notes                                           |
+| ---------------------- | -------------------------- | ----------------------------------------------- |
+| Enable multi-currency  | `enabled`                  | Master switch                                   |
+| Supported currencies   | `supported_currencies[]`   | Uppercase ISO-4217                              |
+| Country → Currency map | `country_currency_map_raw` | Lines `CC=CUR`; include fallback `*=CUR`        |
+| Rate provider          | `rate_provider`            | `frankfurter` \| `exchangeratehost`             |
+| Rate refresh           | `rate_refresh`             | `manual` \| `hourly` \| `twicedaily` \| `daily` |
+| Manual rates           | `manual_rates_raw`         | Lines `CUR=rate` (relative to base)             |
+| Markup                 | `markup_raw`               | `CUR=%:X` or `CUR=fixed:X`                      |
+| Rounding (decimals)    | `rounding_raw`             | `CUR=N` (e.g., `JPY=0`)                         |
+| Allow user switch      | `allow_user_switch`        | Enables switcher UI                             |
+| Geo provider           | `geo_provider`             | `auto` \| `ipinfo` \| `wc` \| `cloudflare`      |
+| ipinfo token           | `ipinfo_token`             | Optional token for ipinfo API                   |
 
 > The plugin stores options in `mrwcmc_settings`. Defaults are merged safely.
 
@@ -162,15 +170,20 @@ mr-multicurrency/
 ## Shortcodes & Theme Hooks
 
 **Shortcodes**
-- `[mrwcmc_switcher]` → dropdown (auto-submit via POST to `admin-post.php?action=mrwcmc_set_currency`)
+
+- `[mrwcmc_switcher]` → dropdown (auto-submit via POST to `admin-post.php?action=mrwcmc_set_currency`) options like “€ EUR”, “₹ INR”, “$ USD”
 - `[mrwcmc_switcher type="links"]` → inline links (JS intercepts to POST; no-JS falls back to `?mrwcmc=`)
+- `[mrwcmc_switcher type="links" style="symbol_only"]` → Links with symbol only: → € ₹ $
+- `[mrwcmc_switcher style="code_symbol"]` → Code then symbol → EUR €, INR ₹, USD $
 
 **Theme hook**
+
 ```php
 do_action('mrwcmc_switcher', ['type' => 'links']); // or omit to use dropdown
 ```
 
 **Optional debug shortcode (if enabled in your build)**
+
 ```text
 [mrwcmc_debug]
 ```
@@ -207,16 +220,19 @@ do_action('mrwcmc_switcher', ['type' => 'links']); // or omit to use dropdown
 ## Troubleshooting
 
 **Currency doesn’t change**
+
 - Ensure the target code (e.g., `EUR`) is in **Supported currencies**.
 - Use dropdown (POST) to avoid early header issues; links fallback relies on guard.
-- Clear Woo caches: **WooCommerce → Status → Tools** → *Clear transients* & *Regenerate product lookup tables*.
+- Clear Woo caches: **WooCommerce → Status → Tools** → _Clear transients_ & _Regenerate product lookup tables_.
 - Disable cache/CDN for a test (or vary on `mrwcmc_currency`).
 
 **Param shows but cookie doesn’t update**
+
 - Another plugin/theme may have output before our guard runs; use the dropdown POST (which sets the cookie in a clean request).
 - Confirm there’s **only one** `mrwcmc_set_currency_cookie()` in `includes/common.php` and it calls `setcookie()`.
 
 **White page/no error**
+
 - Check `wp-content/debug.log`.
 - Add a mu-plugin logging fatal on shutdown:
   ```php
@@ -224,6 +240,7 @@ do_action('mrwcmc_switcher', ['type' => 'links']); // or omit to use dropdown
   ```
 
 **Woo translation loaded too early**
+
 - Ensure all includes load on `init` (not at file top) and no `__()` / `get_woocommerce_currencies()` is called pre-init.
 
 ---
@@ -231,6 +248,7 @@ do_action('mrwcmc_switcher', ['type' => 'links']); // or omit to use dropdown
 ## Developer API
 
 **Filters**
+
 ```php
 // Force/override current currency (final decision)
 add_filter('mrwcmc_current_currency', fn($cur) => $cur, 10, 1);
@@ -246,6 +264,7 @@ add_filter('mrwcmc_geo_country', fn($country) => $country, 10, 1);
 ```
 
 **Actions**
+
 ```php
 // Currency switcher render action
 do_action('mrwcmc_switcher', ['type' => 'links']);
@@ -255,6 +274,7 @@ do_action('mrwcmc_switcher', ['type' => 'links']);
 ```
 
 **Helpers (from `includes/common.php`)**
+
 ```php
 mrwcmc_get_option();             // Merged options (request-cached)
 mrwcmc_get_supported_currs();    // Uppercased codes, base ensured
@@ -272,11 +292,11 @@ mrwcmc_set_currency_cookie('EUR');
 
 ## Roadmap
 
-- Per-product hard local prices per currency  
-- Payment gateways per currency  
-- Cash-unit rounding (e.g., CHF 0.05) & psychological endings (x.99)  
-- Rate smoothing + daily cutoff  
-- WP-CLI commands (`wp mrwcmc rates refresh`, etc.)  
+- Per-product hard local prices per currency
+- Payment gateways per currency
+- Cash-unit rounding (e.g., CHF 0.05) & psychological endings (x.99)
+- Rate smoothing + daily cutoff
+- WP-CLI commands (`wp mrwcmc rates refresh`, etc.)
 - Subscriptions compatibility (freeze currency across renewals)
 
 ---
@@ -284,6 +304,7 @@ mrwcmc_set_currency_cookie('EUR');
 ## Changelog
 
 **0.1.0**
+
 - Initial public version: settings, rates (auto/manual), geo (CF/WC/ipinfo), pricing hooks (simple/variable), switcher (POST + param guard), checkout snapshot, HPOS declaration.
 
 ---
@@ -296,5 +317,5 @@ GPL-2.0-or-later
 
 ## Credits
 
-- FX data via **Frankfurter (ECB)** and **exchangerate.host**  
+- FX data via **Frankfurter (ECB)** and **exchangerate.host**
 - Geo via **Cloudflare** header, **WooCommerce Geolocation/MaxMind**, or **ipinfo**
