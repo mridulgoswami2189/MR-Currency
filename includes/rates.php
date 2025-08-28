@@ -15,16 +15,15 @@ if (!defined('ABSPATH')) {
 /*------------------------------------------------------------------------------
  * Utilities
  *----------------------------------------------------------------------------*/
-if (!function_exists('mrwcmc_get_option')) {
-    // Ensure admin.php is loaded first on admin; on front this is safe too.
-    function mrwcmc_get_option(): array
-    {
-        $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
-        $opt = get_option('mrwcmc_settings', $defaults);
-        if (!is_array($opt)) $opt = $defaults;
-        return array_merge($defaults, $opt);
-    }
-}
+
+// if (!function_exists('mrwcmc_get_option')) {
+//     function mrwcmc_get_option() : array {
+//         $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
+//         $opt = get_option('mrwcmc_settings', $defaults);
+//         if (!is_array($opt)) $opt = $defaults;
+//         return array_merge($defaults, $opt);
+//     }
+// }
 
 if (!function_exists('mrwcmc_parse_manual_rates')) {
     function mrwcmc_parse_manual_rates(string $raw): array

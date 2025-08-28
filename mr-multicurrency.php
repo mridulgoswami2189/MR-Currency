@@ -99,6 +99,7 @@ add_action('admin_notices', function () {
 add_action('plugins_loaded', function () {
     foreach (
         [
+            'includes/common.php',
             'includes/admin.php',
             'includes/rates.php',
             'includes/pricing.php',

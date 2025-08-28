@@ -25,15 +25,15 @@ if (!function_exists('mrwcmc_get_effective_rate')) {
 /*------------------------------------------------------------------------------
  * Options + Supported currencies
  *----------------------------------------------------------------------------*/
-if (!function_exists('mrwcmc_get_option')) {
-    function mrwcmc_get_option(): array
-    {
-        $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
-        $opt = get_option('mrwcmc_settings', $defaults);
-        if (!is_array($opt)) $opt = $defaults;
-        return array_merge($defaults, $opt);
-    }
-}
+
+// if (!function_exists('mrwcmc_get_option')) {
+//     function mrwcmc_get_option() : array {
+//         $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
+//         $opt = get_option('mrwcmc_settings', $defaults);
+//         if (!is_array($opt)) $opt = $defaults;
+//         return array_merge($defaults, $opt);
+//     }
+// }
 
 if (!function_exists('mrwcmc_get_supported_currs')) {
     function mrwcmc_get_supported_currs(): array
@@ -48,24 +48,34 @@ if (!function_exists('mrwcmc_get_supported_currs')) {
     }
 }
 
-/*------------------------------------------------------------------------------
- * Current currency (param/cookie → fallback base). Geo mapping in next file.
- *----------------------------------------------------------------------------*/
+// Current currency: cookie → (fallback) one-off GET param → base
 if (!function_exists('mrwcmc_get_current_currency')) {
-    function mrwcmc_get_current_currency(): string
-    {
+    function mrwcmc_get_current_currency() : string {
         $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         $base      = get_option('woocommerce_currency', 'USD');
 
+        // Cookie
         if (!empty($_COOKIE['mrwcmc_currency'])) {
             $c = strtoupper(sanitize_text_field($_COOKIE['mrwcmc_currency']));
             if (in_array($c, $supported, true)) {
                 return apply_filters('mrwcmc_current_currency', $c);
             }
         }
+
+        // One-off GET param (compat): will be stripped by param-guard right after setting cookie
+        foreach (['mrwcmc', 'mrwcmc_currency', 'currency'] as $key) {
+            if (!empty($_GET[$key])) {
+                $c = strtoupper(sanitize_text_field($_GET[$key]));
+                if (in_array($c, $supported, true)) {
+                    return apply_filters('mrwcmc_current_currency', $c);
+                }
+            }
+        }
+
         return apply_filters('mrwcmc_current_currency', $base);
     }
 }
+
 
 
 

@@ -14,15 +14,15 @@ if (!defined('ABSPATH')) {
  */
 
 // --- helpers to read options ---
-if (!function_exists('mrwcmc_get_option')) {
-    function mrwcmc_get_option(): array
-    {
-        $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
-        $opt = get_option('mrwcmc_settings', $defaults);
-        if (!is_array($opt)) $opt = $defaults;
-        return array_merge($defaults, $opt);
-    }
-}
+
+// if (!function_exists('mrwcmc_get_option')) {
+//     function mrwcmc_get_option() : array {
+//         $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
+//         $opt = get_option('mrwcmc_settings', $defaults);
+//         if (!is_array($opt)) $opt = $defaults;
+//         return array_merge($defaults, $opt);
+//     }
+// }
 
 // --- ipinfo fetch ---
 if (!function_exists('mrwcmc_ipinfo_country')) {
