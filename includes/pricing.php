@@ -224,6 +224,70 @@ if (!function_exists('mrwcmc_convert_product_price')) {
     add_filter('woocommerce_product_get_sale_price', 'mrwcmc_convert_product_price', 9999, 2);
 }
 
+/*------------------------------------------------------------------------------
+ * Variable products: convert variation price arrays + make cache vary by currency
+ *----------------------------------------------------------------------------*/
+
+// 1) Vary the variation prices cache by current currency (and decimals for safety)
+if (!function_exists('mrwcmc_variation_prices_hash')) {
+    function mrwcmc_variation_prices_hash($hash, $product, $display)
+    {
+        if (!is_array($hash)) $hash = (array) $hash;
+        $cur = function_exists('mrwcmc_get_current_currency') ? mrwcmc_get_current_currency() : '';
+        $dec = (int) apply_filters('woocommerce_price_num_decimals', wc_get_price_decimals());
+        $hash['mrwcmc_currency'] = $cur ?: get_option('woocommerce_currency', 'USD');
+        $hash['mrwcmc_decimals'] = $dec;
+        return $hash;
+    }
+    // WooCommerce filter name
+    add_filter('woocommerce_get_variation_prices_hash', 'mrwcmc_variation_prices_hash', 20, 3);
+}
+
+// 2) Convert the variation price arrays used for min/max range and displays
+if (!function_exists('mrwcmc_convert_variation_prices_val')) {
+    function mrwcmc_convert_variation_prices_val($price)
+    {
+        if ($price === '' || $price === null || !is_numeric($price)) return $price;
+        if (is_admin()) return $price;
+
+        $to   = function_exists('mrwcmc_get_current_currency') ? mrwcmc_get_current_currency() : '';
+        $base = get_option('woocommerce_currency', 'USD');
+        if (!$to || strtoupper($to) === strtoupper($base)) return $price;
+
+        return function_exists('mrwcmc_convert_amount')
+            ? mrwcmc_convert_amount((float)$price, strtoupper($to))
+            : (float)$price;
+    }
+}
+
+if (!function_exists('mrwcmc_filter_variation_prices_price')) {
+    function mrwcmc_filter_variation_prices_price($price, $variation, $product)
+    {
+        return mrwcmc_convert_variation_prices_val($price);
+    }
+    add_filter('woocommerce_variation_prices_price', 'mrwcmc_filter_variation_prices_price', 9999, 3);
+    add_filter('woocommerce_variation_prices_regular_price', 'mrwcmc_filter_variation_prices_price', 9999, 3);
+    add_filter('woocommerce_variation_prices_sale_price', 'mrwcmc_filter_variation_prices_price', 9999, 3);
+}
+
+// 3) Also convert direct variation get_* calls (some themes/plugins read directly)
+if (!function_exists('mrwcmc_convert_variation_direct')) {
+    function mrwcmc_convert_variation_direct($price, $product)
+    {
+        // Guard against double-work
+        static $guard = false;
+        if ($guard) return $price;
+        $guard = true;
+        $price = mrwcmc_convert_variation_prices_val($price);
+        $guard = false;
+        return $price;
+    }
+    add_filter('woocommerce_product_variation_get_price', 'mrwcmc_convert_variation_direct', 9999, 2);
+    add_filter('woocommerce_product_variation_get_regular_price', 'mrwcmc_convert_variation_direct', 9999, 2);
+    add_filter('woocommerce_product_variation_get_sale_price', 'mrwcmc_convert_variation_direct', 9999, 2);
+}
+
+
 // Currency symbol automatically follows 'woocommerce_currency', so no extra filter
 // necessary unless you want custom symbols per currency. If needed, uncomment:
 //
@@ -251,5 +315,5 @@ if (!function_exists('mrwcmc_switcher_shortcode')) {
         $out .= '</div>';
         return $out;
     }
-    add_shortcode('mrwcmc_switcher', 'mrwcmc_switcher_shortcode');
+    add_shortcode('npm ins', 'mrwcmc_switcher_shortcode');
 }
