@@ -315,5 +315,5 @@ if (!function_exists('mrwcmc_switcher_shortcode')) {
         $out .= '</div>';
         return $out;
     }
-    add_shortcode('npm ins', 'mrwcmc_switcher_shortcode');
+    add_shortcode('mrwcmc_switcher', 'mrwcmc_switcher_shortcode');
 }
