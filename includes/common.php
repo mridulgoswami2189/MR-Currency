@@ -198,3 +198,65 @@ if (!function_exists('mrwcmc_valid_currency_codes')) {
         return array_keys($list);
     }
 }
+
+// --- Currency symbol & label helpers ---
+if (!function_exists('mrwcmc_currency_symbol')) {
+    function mrwcmc_currency_symbol(string $code): string
+    {
+        $code = strtoupper(trim($code));
+        $sym = '';
+        if (function_exists('get_woocommerce_currency_symbol')) {
+            $raw = get_woocommerce_currency_symbol($code);
+            if (is_string($raw) && $raw !== '') {
+                // Woo returns HTML entities (e.g., &euro;). Decode to a real char.
+                $sym = html_entity_decode($raw, ENT_QUOTES, 'UTF-8');
+            }
+        }
+        if ($sym === '') {
+            static $fallback = array(
+                'USD' => '$',
+                'EUR' => '€',
+                'GBP' => '£',
+                'JPY' => '¥',
+                'CNY' => '¥',
+                'INR' => '₹',
+                'AUD' => '$',
+                'CAD' => '$',
+                'CHF' => 'CHF',
+                'SEK' => 'kr',
+                'NZD' => '$',
+                'RUB' => '₽',
+                'BRL' => 'R$',
+                'ZAR' => 'R',
+            );
+            $sym = $fallback[$code] ?? $code;
+        }
+        return apply_filters('mrwcmc_currency_symbol', $sym, $code);
+    }
+}
+
+if (!function_exists('mrwcmc_format_currency_label')) {
+    /**
+     * Build a human label for a currency (with symbol).
+     * $style: 'symbol_code' (default), 'code_symbol', 'symbol_only', 'code_only'
+     */
+    function mrwcmc_format_currency_label(string $code, string $style = 'symbol_code'): string
+    {
+        $code = strtoupper(trim($code));
+        $sym  = mrwcmc_currency_symbol($code);
+        switch ($style) {
+            case 'code_symbol':
+                $label = $code . ' ' . $sym;
+                break;
+            case 'symbol_only':
+                $label = $sym;
+                break;
+            case 'code_only':
+                $label = $code;
+                break;
+            default:
+                $label = $sym . ' ' . $code; // symbol_code
+        }
+        return apply_filters('mrwcmc_currency_label', $label, $code, $style, $sym);
+    }
+}

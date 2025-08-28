@@ -5,55 +5,65 @@ if (!defined('ABSPATH')) {
 
 /**
  * Currency Switcher UI (POST → cookie) with param fallback.
- * - Shortcode: [mrwcmc_switcher type="dropdown|links"]
- * - JS posts to admin-post.php?action=mrwcmc_set_currency (headers are clean)
- * - <noscript> falls back to a normal POST form
- * - Optional link mode: links are intercepted and posted; if JS missing, guard handles ?mrwcmc=.
+ * - Shortcode: [mrwcmc_switcher type="dropdown|links" style="symbol_code|code_symbol|symbol_only|code_only"]
+ * - Defaults: type=dropdown, style=symbol_code (e.g., "€ EUR")
  */
 
 if (!function_exists('mrwcmc_switcher_render')) {
     function mrwcmc_switcher_render(array $args = []): string
     {
-        $type      = isset($args['type']) ? strtolower(trim($args['type'])) : 'dropdown';
+        $type  = isset($args['type'])  ? strtolower(trim($args['type']))  : 'dropdown'; // 'dropdown'|'links'
+        $style = isset($args['style']) ? strtolower(trim($args['style'])) : 'symbol_code';
+
         $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         if (empty($supported)) return '';
-        $current   = function_exists('mrwcmc_get_current_currency') ? mrwcmc_get_current_currency() : get_option('woocommerce_currency', 'USD');
+
+        $current = function_exists('mrwcmc_get_current_currency')
+            ? mrwcmc_get_current_currency()
+            : get_option('woocommerce_currency', 'USD');
 
         $action = esc_url(admin_url('admin-post.php'));
-        $redir  = esc_url((is_ssl() ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+        $scheme = is_ssl() ? 'https://' : 'http://';
+        $redir  = esc_url($scheme . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
 
         $out = '<div class="mrwcmc-switcher">';
 
         if ($type === 'links') {
             foreach ($supported as $c) {
-                $href = esc_url(add_query_arg('mrwcmc', $c)); // JS will intercept; no-JS fallback hits guard
+                $label = function_exists('mrwcmc_format_currency_label')
+                    ? mrwcmc_format_currency_label($c, $style)
+                    : $c;
+                $href = esc_url(add_query_arg('mrwcmc', $c)); // JS can intercept to POST; no-JS hits guard
                 $cls  = $c === $current ? ' style="font-weight:600;text-decoration:underline;"' : '';
-                $out .= '<a href="' . $href . '" data-mrwcmc-currency="' . esc_attr($c) . '"' . $cls . '>' . esc_html($c) . '</a> ';
+                $out .= '<a href="' . $href . '" data-mrwcmc-currency="' . esc_attr($c) . '"' . $cls . '>'
+                    . esc_html($label) . '</a> ';
             }
-            // No-JS fallback: tiny form
+            // No-JS fallback:
             $out .= '<noscript>
                 <form method="post" action="' . $action . '">
                     <input type="hidden" name="action" value="mrwcmc_set_currency"/>
                     <input type="hidden" name="redirect_to" value="' . $redir . '"/>
                     <select name="currency">';
             foreach ($supported as $c) {
-                $sel = selected($c, $current, false);
-                $out .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($c) . '</option>';
+                $label = function_exists('mrwcmc_format_currency_label') ? mrwcmc_format_currency_label($c, $style) : $c;
+                $sel   = selected($c, $current, false);
+                $out  .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($label) . '</option>';
             }
             $out .=     '</select>
                     <button type="submit">' . esc_html__('Switch', 'mr-multicurrency') . '</button>
                 </form>
             </noscript>';
         } else {
-            // Dropdown
+            // Dropdown (POST submit on change)
             $out .= '<form class="mrwcmc-switcher-form" method="post" action="' . $action . '">
                 <label class="screen-reader-text" for="mrwcmc_currency_select">' . esc_html__('Select currency', 'mr-multicurrency') . '</label>
                 <input type="hidden" name="action" value="mrwcmc_set_currency"/>
                 <input type="hidden" name="redirect_to" value="' . $redir . '"/>
                 <select id="mrwcmc_currency_select" name="currency">';
             foreach ($supported as $c) {
-                $sel = selected($c, $current, false);
-                $out .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($c) . '</option>';
+                $label = function_exists('mrwcmc_format_currency_label') ? mrwcmc_format_currency_label($c, $style) : $c;
+                $sel   = selected($c, $current, false);
+                $out  .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($label) . '</option>';
             }
             $out .= '</select>
                 <noscript><button type="submit">' . esc_html__('Switch', 'mr-multicurrency') . '</button></noscript>
@@ -64,9 +74,7 @@ if (!function_exists('mrwcmc_switcher_render')) {
                 if(!f) return;
                 var s=f.querySelector("#mrwcmc_currency_select");
                 if(!s) return;
-                s.addEventListener("change", function(){
-                    try { f.submit(); } catch(e){ /* ignore */ }
-                });
+                s.addEventListener("change", function(){ try{ f.submit(); }catch(e){} });
             })();
             </script>';
         }
@@ -76,7 +84,10 @@ if (!function_exists('mrwcmc_switcher_render')) {
     }
 
     add_shortcode('mrwcmc_switcher', function ($atts = []) {
-        $atts = shortcode_atts(['type' => 'dropdown'], $atts, 'mrwcmc_switcher');
+        $atts = shortcode_atts([
+            'type'  => 'dropdown',
+            'style' => 'symbol_code',
+        ], $atts, 'mrwcmc_switcher');
         return mrwcmc_switcher_render($atts);
     });
 }
