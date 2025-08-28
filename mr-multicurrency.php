@@ -96,22 +96,23 @@ add_action('admin_notices', function () {
 /*-----------------------------------------------------------------------------
  * Load includes (no output here; just hooking functions)
  *---------------------------------------------------------------------------*/
-add_action('plugins_loaded', function () {
+// in mr-multicurrency.php — replace the include block
+add_action('init', function () {
     foreach (
         [
-            'includes/common.php',
+            'includes/common.php',   // helpers first
             'includes/admin.php',
             'includes/rates.php',
             'includes/pricing.php',
             'includes/geo.php',
             'includes/checkout.php',
             'includes/switcher.php',
-            'includes/rest.php',
             'includes/guard.php',
-            'includes/test.php',
+            'includes/test.php'
+            // 'includes/rest.php', // if you’re not using REST keep it commented
         ] as $rel
     ) {
         $p = MRWCMC_PATH . $rel;
         if (file_exists($p)) require_once $p;
     }
-}, 1);
+}, 0);

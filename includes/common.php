@@ -163,3 +163,28 @@ if (!function_exists('mrwcmc_set_currency_cookie')) {
         return true;
     }
 }
+// SAFE WooCommerce currency list (only after init; otherwise empty)
+if (!function_exists('mrwcmc_wc_currencies')) {
+    function mrwcmc_wc_currencies(): array
+    {
+        static $cache = null;
+        if ($cache !== null) return $cache;
+
+        $cache = [];
+        if (function_exists('get_woocommerce_currencies') && did_action('init')) {
+            // This function uses the 'woocommerce' text domain internally.
+            // Calling it before `init` would trigger the WP 6.7 notice.
+            $cache = (array) get_woocommerce_currencies();
+        }
+        return $cache;
+    }
+}
+
+// Valid codes helper (keys only)
+if (!function_exists('mrwcmc_valid_currency_codes')) {
+    function mrwcmc_valid_currency_codes(): array
+    {
+        $list = mrwcmc_wc_currencies();
+        return array_keys($list);
+    }
+}

@@ -97,20 +97,25 @@ if (!function_exists('mrwcmc_sanitize_settings')) {
         $output['base_currency'] = sanitize_text_field(get_option('woocommerce_currency', 'USD'));
 
         // Valid WooCommerce currencies
-        $valid = function_exists('get_woocommerce_currencies') ? array_keys(get_woocommerce_currencies()) : [];
+        $valid = mrwcmc_valid_currency_codes();
 
-        // Supported currencies (validated, uppercased, ensure base present)
+        // Supported currencies (uppercased, unique)
         $supported = isset($input['supported_currencies']) && is_array($input['supported_currencies'])
-            ? array_map('sanitize_text_field', $input['supported_currencies'])
-            : [];
+            ? array_map('sanitize_text_field', $input['supported_currencies']) : [];
         $supported = array_values(array_unique(array_map('strtoupper', $supported)));
-        $supported = array_values(array_intersect($supported, $valid));
-        if (!in_array($output['base_currency'], $supported, true)) {
+
+        // If valid list is available, intersect; else accept as-is (we’ll correct later)
+        if (!empty($valid)) {
+            $supported = array_values(array_intersect($supported, $valid));
+        }
+
+        if (!in_array(strtoupper($output['base_currency']), $supported, true)) {
             array_unshift($supported, strtoupper($output['base_currency']));
         }
         if (empty($supported)) {
             $supported = [strtoupper($output['base_currency'])];
         }
+        $output['supported_currencies'] = $supported;
 
         // Country → Currency map from textarea
         $map_raw = isset($input['country_currency_map_raw']) ? wp_unslash($input['country_currency_map_raw']) : '';
@@ -226,9 +231,9 @@ if (!function_exists('mrwcmc_field_supported_currencies')) {
     function mrwcmc_field_supported_currencies()
     {
         $opt = mrwcmc_get_option();
-        $currencies = function_exists('get_woocommerce_currencies') ? get_woocommerce_currencies() : [];
+        $currencies = mrwcmc_wc_currencies();
         if (empty($currencies)) {
-            echo '<em>' . esc_html__('WooCommerce not found or no currencies available.', 'mr-multicurrency') . '</em>';
+            echo '<em>' . esc_html__('Currencies not available yet. Please reload this page.', 'mr-multicurrency') . '</em>';
             return;
         }
     ?>
