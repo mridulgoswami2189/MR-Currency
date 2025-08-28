@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Plugin Name: MR WooCommerce Multi-Currency (MRWCMC)
- * Description: Detects user geo-location and switches currency with auto/manual rates and per-currency markup.
- * Author: Mridul & Rohan
+ * Plugin Name: MR Multi-Currency (Geo + Markup)
+ * Description: Auto-geo currency, auto/manual FX rates, per-currency markup & rounding for WooCommerce. Functional-style, HPOS-compatible.
+ * Author: Mridul and Rohan
  * Version: 0.1.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -25,15 +25,8 @@ define('MRWCMC_PATH', plugin_dir_path(__FILE__));
 define('MRWCMC_URL', plugin_dir_url(__FILE__));
 
 /*-----------------------------------------------------------------------------
- * Helpers
+ * Defaults
  *---------------------------------------------------------------------------*/
-if (!function_exists('mrwcmc_wc_active')) {
-    function mrwcmc_wc_active()
-    {
-        return class_exists('WooCommerce') || defined('WC_VERSION');
-    }
-}
-
 if (!function_exists('mrwcmc_defaults')) {
     function mrwcmc_defaults()
     {
@@ -42,13 +35,15 @@ if (!function_exists('mrwcmc_defaults')) {
             'enabled'               => false,
             'base_currency'         => $base,
             'supported_currencies'  => array($base),
-            'country_currency_map'  => array('*' => $base), // fallback
-            'rate_provider'         => 'frankfurter',       // or exchangeratehost
-            'rate_refresh'          => 'daily',             // manual|hourly|twicedaily|daily
-            'manual_rates_raw'      => '',                  // lines: EUR=0.91
-            'markup_raw'            => '',                  // lines: EUR=%:3.0  or  INR=fixed:5
-            'rounding_raw'          => '',                  // lines: JPY=0
+            'country_currency_map'  => array('*' => $base),
+            'rate_provider'         => 'frankfurter',   // or exchangeratehost
+            'rate_refresh'          => 'daily',         // manual|hourly|twicedaily|daily
+            'manual_rates_raw'      => '',
+            'markup_raw'            => '',
+            'rounding_raw'          => '',
             'allow_user_switch'     => true,
+            'geo_provider'          => 'auto',          // auto|ipinfo|wc|cloudflare
+            'ipinfo_token'          => '',
         );
     }
 }
@@ -63,32 +58,44 @@ register_activation_hook(__FILE__, function () {
 });
 
 /*-----------------------------------------------------------------------------
- * Admin notice if WooCommerce is missing
+ * HPOS compatibility declaration
  *---------------------------------------------------------------------------*/
+add_action('before_woocommerce_init', function () {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        // Uncomment if you explicitly support Cart/Checkout Blocks:
+        // \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+});
+
+/*-----------------------------------------------------------------------------
+ * i18n — load translations at init (WordPress 6.7+ requirement)
+ *---------------------------------------------------------------------------*/
+add_action('init', function () {
+    load_plugin_textdomain('mr-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
+});
+
+/*-----------------------------------------------------------------------------
+ * Admin: notice if WooCommerce missing (runs late enough)
+ *---------------------------------------------------------------------------*/
+if (!function_exists('mrwcmc_wc_active')) {
+    function mrwcmc_wc_active()
+    {
+        return class_exists('WooCommerce') || defined('WC_VERSION');
+    }
+}
 add_action('admin_notices', function () {
     if (!current_user_can('activate_plugins')) return;
     if (!mrwcmc_wc_active()) {
         echo '<div class="notice notice-error"><p>' .
-            esc_html__('WooCommerce Multi-Currency requires WooCommerce to be active.', 'mr-multicurrency') .
+            esc_html__('MR Multi-Currency requires WooCommerce to be active.', 'mr-multicurrency') .
             '</p></div>';
     }
 });
 
 /*-----------------------------------------------------------------------------
- * Bootstrap
+ * Load includes (no output here; just hooking functions)
  *---------------------------------------------------------------------------*/
-add_action('plugins_loaded', function () {
-    if (!mrwcmc_wc_active()) return;
-
-    // i18n
-    load_plugin_textdomain('mr-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
-
-    // Future steps will add:
-    // - admin settings (separate file)
-    // - rate providers/caching
-    // - geo detection + pricing filters
-});
-
 add_action('plugins_loaded', function () {
     foreach (
         [
@@ -98,30 +105,12 @@ add_action('plugins_loaded', function () {
             'includes/geo.php',
             'includes/checkout.php',
             'includes/switcher.php',
-            'includes/tests.php',
-            'includes/rest.php'
+            'includes/rest.php',
+            'includes/guard.php',
+            'includes/test.php',
         ] as $rel
     ) {
-        $path = MRWCMC_PATH . $rel;
-        if (file_exists($path)) require_once $path;
+        $p = MRWCMC_PATH . $rel;
+        if (file_exists($p)) require_once $p;
     }
 }, 1);
-
-// HPOS (High-Performance Order Storage) compatibility declaration
-add_action('before_woocommerce_init', function () {
-    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
-        // Declare compatibility with custom order tables (HPOS)
-        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
-            'custom_order_tables',
-            __FILE__,
-            true
-        );
-
-        // OPTIONAL: if you plan to support Cart/Checkout Blocks explicitly
-        // \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
-        //     'cart_checkout_blocks',
-        //     __FILE__,
-        //     true
-        // );
-    }
-});
