@@ -50,31 +50,31 @@ if (!function_exists('mrwcmc_get_supported_currs')) {
 
 // Current currency: cookie → (fallback) one-off GET param → base
 if (!function_exists('mrwcmc_get_current_currency')) {
-    function mrwcmc_get_current_currency() : string {
+    function mrwcmc_get_current_currency(): string
+    {
         $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         $base      = get_option('woocommerce_currency', 'USD');
 
-        // Cookie
+        // 1) One-off GET param wins for this request
+        foreach (['mrwcmc', 'mrwcmc_currency', 'currency'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') {
+                $c = strtoupper(sanitize_text_field($_GET[$k]));
+                if (in_array($c, $supported, true)) return $c;
+            }
+        }
+
+        // 2) Cookie
         if (!empty($_COOKIE['mrwcmc_currency'])) {
             $c = strtoupper(sanitize_text_field($_COOKIE['mrwcmc_currency']));
-            if (in_array($c, $supported, true)) {
-                return apply_filters('mrwcmc_current_currency', $c);
-            }
+            if (in_array($c, $supported, true)) return $c;
         }
 
-        // One-off GET param (compat): will be stripped by param-guard right after setting cookie
-        foreach (['mrwcmc', 'mrwcmc_currency', 'currency'] as $key) {
-            if (!empty($_GET[$key])) {
-                $c = strtoupper(sanitize_text_field($_GET[$key]));
-                if (in_array($c, $supported, true)) {
-                    return apply_filters('mrwcmc_current_currency', $c);
-                }
-            }
-        }
-
-        return apply_filters('mrwcmc_current_currency', $base);
+        // 3) Fallback
+        return $base;
     }
 }
+
+
 
 
 
@@ -169,15 +169,18 @@ if (!function_exists('mrwcmc_convert_amount')) {
  *----------------------------------------------------------------------------*/
 
 // Show the *current* currency code on frontend (we'll convert numbers below).
+// Always reflect our current currency (frontend + ajax + REST)
 if (!function_exists('mrwcmc_filter_woocommerce_currency')) {
     function mrwcmc_filter_woocommerce_currency($currency)
     {
-        if (is_admin()) return $currency;
-        $cur = mrwcmc_get_current_currency();
+        // Don't block in admin; some screens and Store API calls still need the right currency
+        $cur = function_exists('mrwcmc_get_current_currency') ? mrwcmc_get_current_currency() : '';
         return $cur ?: $currency;
     }
-    add_filter('woocommerce_currency', 'mrwcmc_filter_woocommerce_currency', 20);
+    // Very late so we override themes/plugins that set it earlier
+    add_filter('woocommerce_currency', 'mrwcmc_filter_woocommerce_currency', 9999);
 }
+
 
 // Adjust price decimals per currency
 if (!function_exists('mrwcmc_filter_price_decimals')) {

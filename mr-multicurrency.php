@@ -16,68 +16,54 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/*-----------------------------------------------------------------------------
- * Constants
- *---------------------------------------------------------------------------*/
+/* Constants */
 define('MRWCMC_VERSION', '0.1.0');
 define('MRWCMC_FILE', __FILE__);
 define('MRWCMC_PATH', plugin_dir_path(__FILE__));
-define('MRWCMC_URL', plugin_dir_url(__FILE__));
+define('MRWCMC_URL',  plugin_dir_url(__FILE__));
 
-/*-----------------------------------------------------------------------------
- * Defaults
- *---------------------------------------------------------------------------*/
+/* Defaults */
 if (!function_exists('mrwcmc_defaults')) {
     function mrwcmc_defaults()
     {
         $base = get_option('woocommerce_currency', 'USD');
-        return array(
+        return [
             'enabled'               => false,
             'base_currency'         => $base,
-            'supported_currencies'  => array($base),
-            'country_currency_map'  => array('*' => $base),
-            'rate_provider'         => 'frankfurter',   // or exchangeratehost
-            'rate_refresh'          => 'daily',         // manual|hourly|twicedaily|daily
+            'supported_currencies'  => [$base],
+            'country_currency_map'  => ['*' => $base],
+            'rate_provider'         => 'frankfurter',
+            'rate_refresh'          => 'daily', // manual|hourly|twicedaily|daily
             'manual_rates_raw'      => '',
             'markup_raw'            => '',
             'rounding_raw'          => '',
             'allow_user_switch'     => true,
-            'geo_provider'          => 'auto',          // auto|ipinfo|wc|cloudflare
+            'geo_provider'          => 'auto', // auto|ipinfo|wc|cloudflare
             'ipinfo_token'          => '',
-        );
+        ];
     }
 }
 
-/*-----------------------------------------------------------------------------
- * Activation: seed defaults
- *---------------------------------------------------------------------------*/
+/* Activation */
 register_activation_hook(__FILE__, function () {
     if (!get_option('mrwcmc_settings')) {
         add_option('mrwcmc_settings', mrwcmc_defaults(), '', false);
     }
 });
 
-/*-----------------------------------------------------------------------------
- * HPOS compatibility declaration
- *---------------------------------------------------------------------------*/
+/* HPOS compatibility */
 add_action('before_woocommerce_init', function () {
     if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
-        // Uncomment if you explicitly support Cart/Checkout Blocks:
-        // \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
     }
 });
 
-/*-----------------------------------------------------------------------------
- * i18n — load translations at init (WordPress 6.7+ requirement)
- *---------------------------------------------------------------------------*/
+/* i18n on init (WordPress 6.7+ requirement) */
 add_action('init', function () {
     load_plugin_textdomain('mr-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
 
-/*-----------------------------------------------------------------------------
- * Admin: notice if WooCommerce missing (runs late enough)
- *---------------------------------------------------------------------------*/
+/* Admin notice if Woo missing */
 if (!function_exists('mrwcmc_wc_active')) {
     function mrwcmc_wc_active()
     {
@@ -93,14 +79,11 @@ add_action('admin_notices', function () {
     }
 });
 
-/*-----------------------------------------------------------------------------
- * Load includes (no output here; just hooking functions)
- *---------------------------------------------------------------------------*/
-// in mr-multicurrency.php — replace the include block
+/* Load includes on init (safe timing) */
 add_action('init', function () {
     foreach (
         [
-            'includes/common.php',   // helpers first
+            'includes/common.php',
             'includes/admin.php',
             'includes/rates.php',
             'includes/pricing.php',
@@ -108,8 +91,8 @@ add_action('init', function () {
             'includes/checkout.php',
             'includes/switcher.php',
             'includes/guard.php',
-            'includes/test.php'
-            // 'includes/rest.php', // if you’re not using REST keep it commented
+            'includes/actions.php',
+            'includes/tests.php', // only load if you really need it in prod
         ] as $rel
     ) {
         $p = MRWCMC_PATH . $rel;

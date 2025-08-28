@@ -1,53 +1,53 @@
 <?php
-// ...inside mrwcmc_guard_strip_currency_param() just before wp_safe_redirect():
-if (headers_sent()) {
-    // Bail gracefully: do not try to redirect/send cookies if output already started
-    return;
+if (!defined('ABSPATH')) {
+    exit;
 }
-if (!defined('ABSPATH')) { exit; }
 
 /**
  * If URL contains ?mrwcmc= (or legacy ?currency=/ ?mrwcmc_currency=),
- * set cookie then 302 to the same URL without that param(s).
+ * set cookie then 302 to same URL without the param(s).
  */
-if (!function_exists('mrwcmc_guard_strip_currency_param')) {
-    function mrwcmc_guard_strip_currency_param() {
-        if (is_admin()) return;
-
-        $param = null;
-        foreach (['mrwcmc', 'mrwcmc_currency', 'currency'] as $key) {
-            if (isset($_GET[$key]) && $_GET[$key] !== '') {
-                $param = sanitize_text_field($_GET[$key]);
-                break;
-            }
-        }
-        if (!$param) return;
-
-        // Set cookie
-        $set = function($cur) {
-            $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
-            $c = strtoupper(trim($cur));
-            if (!in_array($c, $supported, true)) return false;
-            if (headers_sent()) return false; // don't try if output started
-            $expire = time() + 30 * DAY_IN_SECONDS;
-            $secure = is_ssl();
-            $httponly = true;
-            $path = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
-            $domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
-            setcookie('mrwcmc_currency', $c, $expire, $path, $domain, $secure, $httponly);
-            $_COOKIE['mrwcmc_currency'] = $c;
-            return true;
-        };
-        $ok = $set($param);
-
-        // Redirect to clean URL (remove all currency params)
-        if (!headers_sent()) {
-            $clean = remove_query_arg(['mrwcmc','mrwcmc_currency','currency']);
-            wp_safe_redirect($clean ?: home_url('/'), 302);
-            exit;
-        }
-        // If headers already sent, just fall through; pricing will still use the param this request.
+// Convert all product prices
+if (!function_exists('mrwcmc_convert_product_price')) {
+    function mrwcmc_convert_product_price($price, $product)
+    {
+        if ($price === '' || $price === null || !is_numeric($price)) return $price;
+        $to   = mrwcmc_get_current_currency();
+        $base = get_option('woocommerce_currency', 'USD');
+        if (strtoupper($to) === strtoupper($base)) return $price;
+        return function_exists('mrwcmc_convert_amount') ? mrwcmc_convert_amount((float)$price, $to) : $price;
     }
-    // Early, before template renders
-    add_action('template_redirect', 'mrwcmc_guard_strip_currency_param', 0);
+    add_filter('woocommerce_product_get_price', 'mrwcmc_convert_product_price', 9999, 2);
+    add_filter('woocommerce_product_get_regular_price', 'mrwcmc_convert_product_price', 9999, 2);
+    add_filter('woocommerce_product_get_sale_price', 'mrwcmc_convert_product_price', 9999, 2);
+}
+
+// Variation arrays + cache hash
+if (!function_exists('mrwcmc_variation_prices_hash')) {
+    function mrwcmc_variation_prices_hash($hash, $product, $display)
+    {
+        if (!is_array($hash)) $hash = (array) $hash;
+        $hash['mrwcmc_currency'] = mrwcmc_get_current_currency();
+        $hash['mrwcmc_decimals'] = (int) apply_filters('woocommerce_price_num_decimals', wc_get_price_decimals());
+        return $hash;
+    }
+    add_filter('woocommerce_get_variation_prices_hash', 'mrwcmc_variation_prices_hash', 9999, 3);
+}
+if (!function_exists('mrwcmc_filter_variation_prices_price')) {
+    function mrwcmc_filter_variation_prices_price($price)
+    {
+        return (is_numeric($price)) ? mrwcmc_convert_product_price($price, null) : $price;
+    }
+    add_filter('woocommerce_variation_prices_price', 'mrwcmc_filter_variation_prices_price', 9999);
+    add_filter('woocommerce_variation_prices_regular_price', 'mrwcmc_filter_variation_prices_price', 9999);
+    add_filter('woocommerce_variation_prices_sale_price', 'mrwcmc_filter_variation_prices_price', 9999);
+}
+if (!function_exists('mrwcmc_convert_variation_direct')) {
+    function mrwcmc_convert_variation_direct($price)
+    {
+        return (is_numeric($price)) ? mrwcmc_convert_product_price($price, null) : $price;
+    }
+    add_filter('woocommerce_product_variation_get_price', 'mrwcmc_convert_variation_direct', 9999);
+    add_filter('woocommerce_product_variation_get_regular_price', 'mrwcmc_convert_variation_direct', 9999);
+    add_filter('woocommerce_product_variation_get_sale_price', 'mrwcmc_convert_variation_direct', 9999);
 }

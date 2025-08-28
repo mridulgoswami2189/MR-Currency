@@ -147,7 +147,7 @@ if (!function_exists('mrwcmc_get_decimals_map')) {
 if (!function_exists('mrwcmc_set_currency_cookie')) {
     function mrwcmc_set_currency_cookie(string $currency): bool
     {
-        $supported = mrwcmc_get_supported_currs();
+        $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         $c = strtoupper(trim($currency));
         if (!in_array($c, $supported, true)) return false;
         if (headers_sent()) return false;
@@ -155,11 +155,21 @@ if (!function_exists('mrwcmc_set_currency_cookie')) {
         $expire   = time() + 30 * DAY_IN_SECONDS;
         $secure   = is_ssl();
         $httponly = true;
-        $path     = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
-        $domain   = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+        $domain   = (defined('COOKIE_DOMAIN') && COOKIE_DOMAIN) ? COOKIE_DOMAIN : '';
+        $paths    = [];
+        $paths[]  = (defined('COOKIEPATH') && COOKIEPATH) ? COOKIEPATH : '/';
+        if (defined('SITECOOKIEPATH') && SITECOOKIEPATH) $paths[] = SITECOOKIEPATH;
 
-        setcookie('mrwcmc_currency', $c, $expire, $path, $domain, $secure, $httponly);
+        foreach (array_unique($paths) as $path) {
+            setcookie('mrwcmc_currency', $c, $expire, $path, $domain, $secure, $httponly);
+        }
+
+        // Allow immediate reads this request
         $_COOKIE['mrwcmc_currency'] = $c;
+
+        // DEBUG: uncomment to verify this path is hit
+        // die('[mrwcmc_set_currency_cookie] wrote cookie to ' . implode(',', array_unique($paths)) . ' = ' . $c);
+
         return true;
     }
 }

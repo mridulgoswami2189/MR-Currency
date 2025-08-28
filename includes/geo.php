@@ -155,7 +155,9 @@ if (!function_exists('mrwcmc_init_set_geo_currency')) {
     function mrwcmc_init_set_geo_currency()
     {
         if (is_admin()) return;
-        if (isset($_GET['currency']) || isset($_GET['mrwcmc_currency'])) return;
+        // If user explicitly chose a currency via query, do nothing here.
+        if (isset($_GET['currency']) || isset($_GET['mrwcmc_currency']) || isset($_GET['mrwcmc'])) return;
+
         if (!empty($_COOKIE['mrwcmc_currency'])) return;
 
         $country = mrwcmc_geolocate_country();
@@ -169,8 +171,9 @@ if (!function_exists('mrwcmc_init_set_geo_currency')) {
         $httponly = true;
         $path     = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
         $domain   = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
-        setcookie('mrwcmc_currency', $desired, $expire, $path, $domain, $secure, $httponly);
-        $_COOKIE['mrwcmc_currency'] = $desired;
+        if (function_exists('mrwcmc_set_currency_cookie')) {
+            mrwcmc_set_currency_cookie($desired);
+        }
     }
     add_action('init', 'mrwcmc_init_set_geo_currency', 1);
 }
