@@ -8,14 +8,14 @@ if (!defined('ABSPATH')) {
 // ---- Settings API (functional style) -----------------------------------------
 //
 
-// if (!function_exists('mrwcmc_get_option')) {
-//     function mrwcmc_get_option(): array
-//     {
-//         $opt = get_option('mrwcmc_settings', mrwcmc_defaults());
-//         if (!is_array($opt)) $opt = mrwcmc_defaults();
-//         return array_merge(mrwcmc_defaults(), $opt);
-//     }
-// }
+if (!function_exists('mrwcmc_get_option')) {
+    function mrwcmc_get_option(): array
+    {
+        $opt = get_option('mrwcmc_settings', mrwcmc_defaults());
+        if (!is_array($opt)) $opt = mrwcmc_defaults();
+        return array_merge(mrwcmc_defaults(), $opt);
+    }
+}
 
 if (!function_exists('mrwcmc_parse_key_pairs')) {
     function mrwcmc_parse_key_pairs(string $raw): array
