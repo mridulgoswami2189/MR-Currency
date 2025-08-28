@@ -98,7 +98,8 @@ add_action('plugins_loaded', function () {
             'includes/geo.php',
             'includes/checkout.php',
             'includes/switcher.php',
-            'includes/tests.php'
+            'includes/tests.php',
+            'includes/rest.php'
         ] as $rel
     ) {
         $path = MRWCMC_PATH . $rel;

@@ -1,24 +1,15 @@
 <?php
-// File: wp-content/plugins/mr-multicurrency/includes/switcher.php
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Currency Switcher UI (functional style)
+ * Currency Switcher UI (no URL params)
  * - Shortcode: [mrwcmc_switcher type="dropdown|links"]
- * - Renders a simple dropdown (auto-submit) or inline links
- * - Uses existing ?currency=XYZ handler from pricing.php (no extra endpoints)
- * - Minimal, theme-agnostic CSS (inline)
- *
- * Requires helpers from other includes:
- * - mrwcmc_get_supported_currs()
- * - mrwcmc_get_current_currency()
+ * - Uses REST POST /wp-json/mrwcmc/v1/currency to set cookie, then reload
+ * - Includes no-JS fallback via admin-post POST
  */
 
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
 if (!function_exists('mrwcmc_get_option')) {
     function mrwcmc_get_option(): array
     {
@@ -32,40 +23,35 @@ if (!function_exists('mrwcmc_get_option')) {
 if (!function_exists('mrwcmc_switcher_render')) {
     function mrwcmc_switcher_render(array $args = []): string
     {
-        $type      = isset($args['type']) ? strtolower(trim($args['type'])) : 'dropdown'; // 'dropdown' | 'links'
+        $type      = isset($args['type']) ? strtolower(trim($args['type'])) : 'dropdown'; // 'dropdown'|'links'
         $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         if (empty($supported)) return '';
         $current   = function_exists('mrwcmc_get_current_currency') ? mrwcmc_get_current_currency() : '';
         if (!$current) $current = get_option('woocommerce_currency', 'USD');
 
-        $wrap_attrs = 'class="mrwcmc-switcher"';
-        $out = '<div ' . $wrap_attrs . '>';
+        $out = '<div class="mrwcmc-switcher">';
 
         if ($type === 'links') {
             foreach ($supported as $c) {
-                $url = add_query_arg('currency', $c);
                 $cls = $c === $current ? ' style="font-weight:600;text-decoration:underline;"' : '';
-                $out .= '<a' . $cls . ' href="' . esc_url($url) . '">' . esc_html($c) . '</a> ';
+                $out .= '<a href="#" data-mrwcmc-currency="' . esc_attr($c) . '"' . $cls . '>' . esc_html($c) . '</a> ';
             }
+            $out .= '<noscript><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="mrwcmc_set_currency"/><select name="currency">';
+            foreach ($supported as $c) {
+                $sel = selected($c, $current, false);
+                $out .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($c) . '</option>';
+            }
+            $out .= '</select> <button type="submit">' . esc_html__('Switch', 'mr-multicurrency') . '</button></form></noscript>';
         } else {
-            // dropdown (GET form that preserves existing query args except currency)
-            $out .= '<form class="mrwcmc-switcher-form" method="get" action="">';
-            // keep current query args
-            foreach ($_GET as $k => $v) {
-                if ($k === 'currency') continue;
-                if (is_array($v)) continue; // keep simple
-                $k = sanitize_key($k);
-                $v = esc_attr($v);
-                $out .= '<input type="hidden" name="' . $k . '" value="' . $v . '"/>';
-            }
+            $out .= '<form class="mrwcmc-switcher-form" onsubmit="return false">';
             $out .= '<label class="screen-reader-text" for="mrwcmc_currency_select">' . esc_html__('Select currency', 'mr-multicurrency') . '</label>';
-            $out .= '<select id="mrwcmc_currency_select" name="currency" onchange="this.form.submit()">';
+            $out .= '<select id="mrwcmc_currency_select" name="currency">';
             foreach ($supported as $c) {
                 $sel = selected($c, $current, false);
                 $out .= '<option value="' . esc_attr($c) . '"' . $sel . '>' . esc_html($c) . '</option>';
             }
             $out .= '</select>';
-            $out .= '<noscript><button type="submit">' . esc_html__('Switch', 'mr-multicurrency') . '</button></noscript>';
+            $out .= '<noscript><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="mrwcmc_set_currency"/><input type="hidden" name="currency" value="' . esc_attr($current) . '"/><button type="submit">' . esc_html__('Switch', 'mr-multicurrency') . '</button></form></noscript>';
             $out .= '</form>';
         }
 
@@ -74,47 +60,74 @@ if (!function_exists('mrwcmc_switcher_render')) {
     }
 }
 
-// -----------------------------------------------------------------------------
-// Shortcode
-// -----------------------------------------------------------------------------
 if (!function_exists('mrwcmc_switcher_shortcode')) {
     function mrwcmc_switcher_shortcode($atts = [])
     {
-        $atts = shortcode_atts([
-            'type' => 'dropdown', // 'dropdown' or 'links'
-        ], $atts, 'mrwcmc_switcher');
+        $atts = shortcode_atts(['type' => 'dropdown'], $atts, 'mrwcmc_switcher');
         return mrwcmc_switcher_render($atts);
     }
     add_shortcode('mrwcmc_switcher', 'mrwcmc_switcher_shortcode');
 }
 
-// -----------------------------------------------------------------------------
-// Tiny inline CSS (frontend only)
-// -----------------------------------------------------------------------------
+/** CSS (unchanged) */
 if (!function_exists('mrwcmc_enqueue_switcher_css')) {
     function mrwcmc_enqueue_switcher_css()
     {
         if (is_admin()) return;
-        // Register a handle for inline CSS without external file.
         $handle = 'mrwcmc-inline';
         if (!wp_style_is($handle, 'registered')) {
             wp_register_style($handle, false, [], null);
         }
         wp_enqueue_style($handle);
-        $css = '
+        wp_add_inline_style($handle, '
             .mrwcmc-switcher { display:inline-flex; gap:.5rem; align-items:center; }
             .mrwcmc-switcher-form select { padding:.25rem .5rem; }
             .mrwcmc-switcher a { text-decoration:none; border:1px solid rgba(0,0,0,.1); padding:.25rem .5rem; border-radius:4px; }
             .mrwcmc-switcher a:hover { background:rgba(0,0,0,.05); }
-        ';
-        wp_add_inline_style($handle, trim($css));
+        ');
     }
     add_action('wp_enqueue_scripts', 'mrwcmc_enqueue_switcher_css');
 }
 
-// -----------------------------------------------------------------------------
-// Convenience action for themes: do_action('mrwcmc_switcher', ['type'=>'links'])
-// -----------------------------------------------------------------------------
+/** JS: talks to REST and reloads (no URL params) */
+if (!function_exists('mrwcmc_enqueue_switcher_js')) {
+    function mrwcmc_enqueue_switcher_js()
+    {
+        if (is_admin()) return;
+        $h = 'mrwcmc-switcher-js';
+        wp_register_script($h, '', [], null, true);
+        wp_enqueue_script($h);
+        wp_localize_script($h, 'MRWCMC', [
+            'endpoint' => esc_url_raw(rest_url('mrwcmc/v1/currency')),
+        ]);
+        $js = <<<JS
+(function(){
+    function setCurrency(cur){
+        if(!cur) return;
+        try{
+            fetch(MRWCMC.endpoint, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({currency: String(cur).toUpperCase()})
+            }).then(function(){ location.reload(); });
+        }catch(e){ location.reload(); }
+    }
+    document.addEventListener('change', function(e){
+        var sel = e.target.closest && e.target.closest('#mrwcmc_currency_select');
+        if (sel) setCurrency(e.target.value);
+    });
+    document.addEventListener('click', function(e){
+        var a = e.target.closest && e.target.closest('[data-mrwcmc-currency]');
+        if (a){ e.preventDefault(); setCurrency(a.getAttribute('data-mrwcmc-currency')); }
+    });
+})();
+JS;
+        wp_add_inline_script($h, $js);
+    }
+    add_action('wp_enqueue_scripts', 'mrwcmc_enqueue_switcher_js');
+}
+
+/** Theme convenience action remains */
 if (!function_exists('mrwcmc_switcher_action')) {
     function mrwcmc_switcher_action($args = [])
     {

@@ -51,38 +51,28 @@ if (!function_exists('mrwcmc_get_supported_currs')) {
 /*------------------------------------------------------------------------------
  * Current currency (param/cookie → fallback base). Geo mapping in next file.
  *----------------------------------------------------------------------------*/
+// Current currency (cookie only; geo.php sets it on first visit)
 if (!function_exists('mrwcmc_get_current_currency')) {
     function mrwcmc_get_current_currency(): string
     {
-        $opt = mrwcmc_get_option();
+        $opt       = mrwcmc_get_option();
         $supported = mrwcmc_get_supported_currs();
-        $base = get_option('woocommerce_currency', 'USD');
+        $base      = get_option('woocommerce_currency', 'USD');
 
-        // Allow switch via URL ?currency=XYZ or ?mrwcmc_currency=XYZ
-        $param = isset($_GET['currency']) ? $_GET['currency'] : (isset($_GET['mrwcmc_currency']) ? $_GET['mrwcmc_currency'] : '');
-        if (!empty($opt['allow_user_switch']) && $param) {
-            $c = strtoupper(sanitize_text_field($param));
+        // Only read cookie (no URL param). Geo sets it on first visit.
+        if (!empty($_COOKIE['mrwcmc_currency'])) {
+            $c = strtoupper(sanitize_text_field($_COOKIE['mrwcmc_currency']));
             if (in_array($c, $supported, true)) {
-                // persist for 30 days
-                $expire = time() + 30 * DAY_IN_SECONDS;
-                $secure = is_ssl();
-                $httponly = true;
-                setcookie('mrwcmc_currency', $c, $expire, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, $secure, $httponly);
-                $_COOKIE['mrwcmc_currency'] = $c;
-                return $c;
+                /** Allow devs to override final currency */
+                return apply_filters('mrwcmc_current_currency', $c);
             }
         }
 
-        // Cookie
-        if (isset($_COOKIE['mrwcmc_currency'])) {
-            $c = strtoupper(sanitize_text_field($_COOKIE['mrwcmc_currency']));
-            if (in_array($c, $supported, true)) return $c;
-        }
-
-        // Fallback (for now): base. (Next file: use country → currency map.)
-        return $base;
+        // Fallback: base (or geo.php will set cookie early)
+        return apply_filters('mrwcmc_current_currency', $base);
     }
 }
+
 
 /*------------------------------------------------------------------------------
  * Markup + Rounding parsing
