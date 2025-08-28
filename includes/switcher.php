@@ -90,6 +90,7 @@ if (!function_exists('mrwcmc_enqueue_switcher_css')) {
 }
 
 /** JS: talks to REST and reloads (no URL params) */
+// enqueue script
 if (!function_exists('mrwcmc_enqueue_switcher_js')) {
     function mrwcmc_enqueue_switcher_js()
     {
@@ -98,23 +99,30 @@ if (!function_exists('mrwcmc_enqueue_switcher_js')) {
         wp_register_script($h, '', [], null, true);
         wp_enqueue_script($h);
         wp_localize_script($h, 'MRWCMC', [
-            'endpoint' => esc_url_raw(rest_url('mrwcmc/v1/currency')),
+            'endpoint'  => esc_url_raw(rest_url('mrwcmc/v1/currency')),
+            'adminPost' => esc_url_raw(admin_url('admin-post.php')),
         ]);
         $js = <<<JS
 (function(){
+    function postAdmin(cur){
+        var f=document.createElement('form');
+        f.method='POST'; f.action=MRWCMC.adminPost;
+        var a=document.createElement('input'); a.type='hidden'; a.name='action'; a.value='mrwcmc_set_currency'; f.appendChild(a);
+        var b=document.createElement('input'); b.type='hidden'; b.name='currency'; b.value=String(cur).toUpperCase(); f.appendChild(b);
+        document.body.appendChild(f); f.submit();
+    }
     function setCurrency(cur){
         if(!cur) return;
+        var payload = JSON.stringify({currency:String(cur).toUpperCase()});
         try{
-            fetch(MRWCMC.endpoint, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({currency: String(cur).toUpperCase()})
-            }).then(function(){ location.reload(); });
-        }catch(e){ location.reload(); }
+            fetch(MRWCMC.endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:payload })
+            .then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); })
+            .then(function(d){ if(!d || d.ok!==true) throw new Error('bad'); location.reload(); })
+            .catch(function(){ postAdmin(cur); });
+        }catch(e){ postAdmin(cur); }
     }
     document.addEventListener('change', function(e){
-        var sel = e.target.closest && e.target.closest('#mrwcmc_currency_select');
-        if (sel) setCurrency(e.target.value);
+        if (e.target && e.target.id === 'mrwcmc_currency_select') { setCurrency(e.target.value); }
     });
     document.addEventListener('click', function(e){
         var a = e.target.closest && e.target.closest('[data-mrwcmc-currency]');
@@ -126,6 +134,7 @@ JS;
     }
     add_action('wp_enqueue_scripts', 'mrwcmc_enqueue_switcher_js');
 }
+
 
 /** Theme convenience action remains */
 if (!function_exists('mrwcmc_switcher_action')) {

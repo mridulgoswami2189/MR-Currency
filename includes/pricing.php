@@ -51,27 +51,22 @@ if (!function_exists('mrwcmc_get_supported_currs')) {
 /*------------------------------------------------------------------------------
  * Current currency (param/cookie → fallback base). Geo mapping in next file.
  *----------------------------------------------------------------------------*/
-// Current currency (cookie only; geo.php sets it on first visit)
 if (!function_exists('mrwcmc_get_current_currency')) {
     function mrwcmc_get_current_currency(): string
     {
-        $opt       = mrwcmc_get_option();
-        $supported = mrwcmc_get_supported_currs();
+        $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
         $base      = get_option('woocommerce_currency', 'USD');
 
-        // Only read cookie (no URL param). Geo sets it on first visit.
         if (!empty($_COOKIE['mrwcmc_currency'])) {
             $c = strtoupper(sanitize_text_field($_COOKIE['mrwcmc_currency']));
             if (in_array($c, $supported, true)) {
-                /** Allow devs to override final currency */
                 return apply_filters('mrwcmc_current_currency', $c);
             }
         }
-
-        // Fallback: base (or geo.php will set cookie early)
         return apply_filters('mrwcmc_current_currency', $base);
     }
 }
+
 
 
 /*------------------------------------------------------------------------------
