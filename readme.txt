@@ -1,14 +1,14 @@
-=== MR Multi-Currency for WooCommerce (Geo + Markup) ===
-Contributors: mrwcmc
-Tags: woocommerce, currency, multi-currency, exchange rates, geolocation, ecommerce
+=== MR Multi-Currency (Geo + Markup) for WooCommerce ===
+Contributors: mridulgoswami
+Tags: woocommerce, currency, multi-currency, exchange rates, geolocation
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 7.4
 Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A lightweight, functional-style WooCommerce add-on for automatic & manual FX rates, per-currency markup/rounding, geo-based defaults, and a clean switcher. HPOS compatible.
+A WooCommerce add-on for automatic & manual FX rates, per-currency markup/rounding, geo-based, HPOS compatible.
 
 == Description ==
 

@@ -208,9 +208,14 @@ if (!function_exists('mrwcmc_render_snapshot_in_admin')) {
             echo '<p><strong>' . esc_html__('Rates at checkout', 'mr-multicurrency') . ':</strong></p>';
             echo '<ul style="margin:0 0 6px 16px;list-style:disc;">';
             foreach ($rates as $code => $rate) {
-                $code = esc_html($code);
-                $rate = esc_html(is_numeric($rate) ? (string)$rate : (string)$rate);
-                echo "<li>{$code} = {$rate}</li>";
+                // Format the scalar safely, then escape on output
+                $rate_display = is_numeric($rate) ? (string) $rate : (string) $rate;
+
+                printf(
+                    '<li>%1$s = %2$s</li>',
+                    esc_html($code),
+                    esc_html($rate_display)
+                );
             }
             echo '</ul>';
         }
@@ -229,12 +234,6 @@ if (!function_exists('mrwcmc_admin_inline_styles')) {
         if ($hook !== 'post.php' && $hook !== 'post-new.php') return;
         $screen = get_current_screen();
         if (!$screen || $screen->id !== 'shop_order') return;
-
-        $css = '
-            .order_data_column.mrwcmc-snapshot { padding:12px; border:1px solid #ccd0d4; border-radius:4px; margin-top:10px; }
-            .order_data_column.mrwcmc-snapshot h3 { margin-top:0; }
-        ';
-        wp_add_inline_style('woocommerce_admin_styles', $css);
     }
     add_action('admin_enqueue_scripts', 'mrwcmc_admin_inline_styles');
 }

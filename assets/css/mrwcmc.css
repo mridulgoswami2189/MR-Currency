@@ -1,0 +1,26 @@
+.mrwcmc-switcher {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.mrwcmc-switcher-form select {
+  padding: 0.25rem 0.5rem;
+}
+.mrwcmc-switcher a {
+  text-decoration: none;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.mrwcmc-switcher a:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.order_data_column.mrwcmc-snapshot {
+  padding: 12px;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+.order_data_column.mrwcmc-snapshot h3 {
+  margin-top: 0;
+}

@@ -1,16 +1,27 @@
 <?php
 
 /**
- * Plugin Name: MR Multi-Currency (Geo + Markup)
+ * Plugin Name: MR Multi-Currency (Geo + Markup) for WooCommerce
+ * Plugin URI: https://mridulgoswami.com/mr-multicurrency
  * Description: Auto-geo currency, auto/manual FX rates, per-currency markup & rounding for WooCommerce. Functional-style, HPOS-compatible.
  * Author: Mridul and Rohan
+ * Author URI: https://mridulgoswami.com/
  * Version: 0.1.0
+ *
  * Requires at least: 6.0
  * Requires PHP: 7.4
+ * Requires Plugins: woocommerce
+ *
  * Text Domain: mr-multicurrency
- * Domain Path: /languages
+ * 
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ *
+ * Tested up to: 6.8
+ * WC requires at least: 7.0
  * WC tested up to: 9.0
  */
+
 
 if (!defined('ABSPATH')) {
     exit;
@@ -58,10 +69,6 @@ add_action('before_woocommerce_init', function () {
     }
 });
 
-/* i18n on init (WordPress 6.7+ requirement) */
-add_action('init', function () {
-    load_plugin_textdomain('mr-multicurrency', false, dirname(plugin_basename(__FILE__)) . '/languages');
-});
 
 /* Admin notice if Woo missing */
 if (!function_exists('mrwcmc_wc_active')) {
@@ -92,10 +99,22 @@ add_action('init', function () {
             'includes/switcher.php',
             'includes/guard.php',
             'includes/actions.php',
-            'includes/tests.php', // only load if you really need it in prod
+            // 'includes/tests.php', // only load if you really need it in prod
         ] as $rel
     ) {
         $p = MRWCMC_PATH . $rel;
         if (file_exists($p)) require_once $p;
     }
 }, 0);
+
+add_action('wp_enqueue_scripts', function () {
+    if (is_admin()) return;
+
+    $handle = 'mrwcmc';
+    $src    = MRWCMC_URL . 'assets/css/mrwcmc.css';
+    $ver    = file_exists(MRWCMC_PATH . 'assets/css/mrwcmc.css')
+        ? (string) filemtime(MRWCMC_PATH . 'assets/css/mrwcmc.css')
+        : (defined('MRWCMC_VERSION') ? MRWCMC_VERSION : '1');
+
+    wp_enqueue_style($handle, $src, [], $ver);
+});

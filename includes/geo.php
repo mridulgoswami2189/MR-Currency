@@ -13,37 +13,37 @@ if (!defined('ABSPATH')) {
  * - auto (default): Cloudflare → WooCommerce → ipinfo (if token set)
  */
 
-// --- helpers to read options ---
-
-// if (!function_exists('mrwcmc_get_option')) {
-//     function mrwcmc_get_option() : array {
-//         $defaults = function_exists('mrwcmc_defaults') ? mrwcmc_defaults() : array();
-//         $opt = get_option('mrwcmc_settings', $defaults);
-//         if (!is_array($opt)) $opt = $defaults;
-//         return array_merge($defaults, $opt);
-//     }
-// }
-
 // --- ipinfo fetch ---
 if (!function_exists('mrwcmc_ipinfo_country')) {
     function mrwcmc_ipinfo_country(string $ip = ''): string
     {
-        $opt   = mrwcmc_get_option();
-        $token = isset($opt['ipinfo_token']) ? trim($opt['ipinfo_token']) : '';
-        // Build URL
+        $opt   = function_exists('mrwcmc_get_option') ? mrwcmc_get_option() : [];
+        $token = isset($opt['ipinfo_token']) ? trim((string) $opt['ipinfo_token']) : '';
+
+        // Validate IP if provided
+        if ($ip !== '' && !filter_var($ip, FILTER_VALIDATE_IP)) {
+            $ip = '';
+        }
+
         $base  = 'https://ipinfo.io/';
         $path  = $ip ? rawurlencode($ip) . '/json' : 'json';
         $url   = $base . $path;
         if ($token !== '') {
             $url = add_query_arg(['token' => $token], $url);
         }
+
         $res = wp_remote_get($url, ['timeout' => 8]);
-        if (is_wp_error($res)) return '';
-        $code = wp_remote_retrieve_response_code($res);
-        if ($code !== 200) return '';
+        if (is_wp_error($res)) {
+            return '';
+        }
+        $code = (int) wp_remote_retrieve_response_code($res);
+        if ($code !== 200) {
+            return '';
+        }
+
         $body = json_decode(wp_remote_retrieve_body($res), true);
-        $cc   = isset($body['country']) ? strtoupper(trim($body['country'])) : '';
-        return (preg_match('/^[A-Z]{2}$/', $cc)) ? $cc : '';
+        $cc   = isset($body['country']) ? strtoupper(trim((string) $body['country'])) : '';
+        return preg_match('/^[A-Z]{2}$/', $cc) ? $cc : '';
     }
 }
 
@@ -51,10 +51,9 @@ if (!function_exists('mrwcmc_ipinfo_country')) {
 if (!function_exists('mrwcmc_cloudflare_country')) {
     function mrwcmc_cloudflare_country(): string
     {
-        if (!empty($_SERVER['HTTP_CF_IPCOUNTRY']) && preg_match('/^[A-Z]{2}$/', $_SERVER['HTTP_CF_IPCOUNTRY'])) {
-            return strtoupper($_SERVER['HTTP_CF_IPCOUNTRY']);
-        }
-        return '';
+        $raw = filter_input(INPUT_SERVER, 'HTTP_CF_IPCOUNTRY', FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE);
+        $cc  = is_string($raw) ? strtoupper(trim($raw)) : '';
+        return preg_match('/^[A-Z]{2}$/', $cc) ? $cc : '';
     }
 }
 
@@ -64,8 +63,11 @@ if (!function_exists('mrwcmc_wc_country')) {
     {
         if (class_exists('WC_Geolocation')) {
             $loc = WC_Geolocation::geolocate_ip();
-            if (is_array($loc) && !empty($loc['country']) && preg_match('/^[A-Z]{2}$/', $loc['country'])) {
-                return strtoupper($loc['country']);
+            if (is_array($loc) && !empty($loc['country'])) {
+                $cc = strtoupper(trim((string) $loc['country']));
+                if (preg_match('/^[A-Z]{2}$/', $cc)) {
+                    return $cc;
+                }
             }
         }
         return '';
@@ -76,7 +78,9 @@ if (!function_exists('mrwcmc_wc_country')) {
 if (!function_exists('mrwcmc_get_client_ip')) {
     function mrwcmc_get_client_ip(): string
     {
-        return isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        $raw = filter_input(INPUT_SERVER, 'REMOTE_ADDR', FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE);
+        $ip  = is_string($raw) ? trim($raw) : '';
+        return ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) ? $ip : '';
     }
 }
 
@@ -84,8 +88,8 @@ if (!function_exists('mrwcmc_get_client_ip')) {
 if (!function_exists('mrwcmc_detect_country_uncached')) {
     function mrwcmc_detect_country_uncached(): string
     {
-        $opt   = mrwcmc_get_option();
-        $prov  = $opt['geo_provider'] ?? 'auto';
+        $opt   = function_exists('mrwcmc_get_option') ? mrwcmc_get_option() : [];
+        $prov  = isset($opt['geo_provider']) ? (string) $opt['geo_provider'] : 'auto';
         $ip    = mrwcmc_get_client_ip();
 
         if ($prov === 'cloudflare') {
@@ -100,20 +104,28 @@ if (!function_exists('mrwcmc_detect_country_uncached')) {
 
         // auto: try Cloudflare → WooCommerce → ipinfo (only if token present)
         $cc = mrwcmc_cloudflare_country();
-        if ($cc) return $cc;
+        if ($cc) {
+            return $cc;
+        }
 
         $cc = mrwcmc_wc_country();
-        if ($cc) return $cc;
+        if ($cc) {
+            return $cc;
+        }
 
         if (!empty($opt['ipinfo_token'])) {
             $cc = mrwcmc_ipinfo_country($ip);
-            if ($cc) return $cc;
+            if ($cc) {
+                return $cc;
+            }
         }
 
         // last resort: try common server vars
         foreach (['GEOIP_COUNTRY_CODE', 'HTTP_X_GEOIP_COUNTRY', 'HTTP_GEOIP_COUNTRY_CODE'] as $k) {
-            if (!empty($_SERVER[$k]) && preg_match('/^[A-Z]{2}$/', $_SERVER[$k])) {
-                return strtoupper($_SERVER[$k]);
+            $raw = filter_input(INPUT_SERVER, $k, FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE);
+            $cc  = is_string($raw) ? strtoupper(trim($raw)) : '';
+            if (preg_match('/^[A-Z]{2}$/', $cc)) {
+                return $cc;
             }
         }
         return '';
@@ -124,10 +136,13 @@ if (!function_exists('mrwcmc_detect_country_uncached')) {
 if (!function_exists('mrwcmc_geolocate_country')) {
     function mrwcmc_geolocate_country(): string
     {
-        $ip = mrwcmc_get_client_ip();
-        $key = 'mrwcmc_cc_' . md5(($ip ?: 'none') . '|' . maybe_serialize(mrwcmc_get_option()['geo_provider'] ?? 'auto'));
-        $cc = get_transient($key);
-        if ($cc && preg_match('/^[A-Z]{2}$/', $cc)) {
+        $ip  = mrwcmc_get_client_ip();
+        $opt = function_exists('mrwcmc_get_option') ? mrwcmc_get_option() : [];
+        $prov = isset($opt['geo_provider']) ? (string) $opt['geo_provider'] : 'auto';
+
+        $key = 'mrwcmc_cc_' . md5(($ip ?: 'none') . '|' . $prov);
+        $cc  = get_transient($key);
+        if (is_string($cc) && preg_match('/^[A-Z]{2}$/', $cc)) {
             return $cc;
         }
         $cc = mrwcmc_detect_country_uncached();
@@ -140,37 +155,57 @@ if (!function_exists('mrwcmc_geolocate_country')) {
 if (!function_exists('mrwcmc_currency_for_country')) {
     function mrwcmc_currency_for_country(string $country): string
     {
-        $opt = mrwcmc_get_option();
-        $map = isset($opt['country_currency_map']) && is_array($opt['country_currency_map']) ? $opt['country_currency_map'] : [];
-        $base = get_option('woocommerce_currency', 'USD');
-        $country = strtoupper(trim($country));
-        if ($country && isset($map[$country])) return strtoupper($map[$country]);
-        if (isset($map['*'])) return strtoupper($map['*']);
-        return strtoupper($base);
+        $opt   = function_exists('mrwcmc_get_option') ? mrwcmc_get_option() : [];
+        $map   = isset($opt['country_currency_map']) && is_array($opt['country_currency_map']) ? $opt['country_currency_map'] : [];
+        $base  = strtoupper(get_option('woocommerce_currency', 'USD'));
+        $cc    = strtoupper(trim($country));
+
+        if ($cc !== '' && isset($map[$cc])) {
+            return strtoupper((string) $map[$cc]);
+        }
+        if (isset($map['*'])) {
+            return strtoupper((string) $map['*']);
+        }
+        return $base;
     }
 }
 
 // --- early cookie setter (don’t overwrite user choice) ---
 if (!function_exists('mrwcmc_init_set_geo_currency')) {
-    function mrwcmc_init_set_geo_currency()
+    function mrwcmc_init_set_geo_currency(): void
     {
-        if (is_admin()) return;
-        // If user explicitly chose a currency via query, do nothing here.
-        if (isset($_GET['currency']) || isset($_GET['mrwcmc_currency']) || isset($_GET['mrwcmc'])) return;
+        if (is_admin()) {
+            return;
+        }
 
-        if (!empty($_COOKIE['mrwcmc_currency'])) return;
+        // If user explicitly chose a currency via query, do nothing here (read-only gate).
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only check; no state change occurs here.
+        $has_param = false;
+        foreach (['mrwcmc', 'mrwcmc_currency', 'currency'] as $k) {
+            $v = filter_input(INPUT_GET, $k, FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE);
+            if (is_string($v) && $v !== '') {
+                $has_param = true;
+                break;
+            }
+        }
+        if ($has_param) {
+            return;
+        }
+
+        // If cookie already set, do nothing.
+        $cookie = filter_input(INPUT_COOKIE, 'mrwcmc_currency', FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE);
+        if (is_string($cookie) && $cookie !== '') {
+            return;
+        }
 
         $country = mrwcmc_geolocate_country();
         $desired = mrwcmc_currency_for_country($country);
 
         $supported = function_exists('mrwcmc_get_supported_currs') ? mrwcmc_get_supported_currs() : [];
-        if (empty($supported) || !in_array($desired, $supported, true)) return;
+        if (empty($supported) || !in_array($desired, $supported, true)) {
+            return;
+        }
 
-        $expire   = time() + 30 * DAY_IN_SECONDS;
-        $secure   = is_ssl();
-        $httponly = true;
-        $path     = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
-        $domain   = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
         if (function_exists('mrwcmc_set_currency_cookie')) {
             mrwcmc_set_currency_cookie($desired);
         }
@@ -180,7 +215,7 @@ if (!function_exists('mrwcmc_init_set_geo_currency')) {
 
 // --- cache/CDN correctness ---
 if (!function_exists('mrwcmc_send_vary_cookie_header')) {
-    function mrwcmc_send_vary_cookie_header()
+    function mrwcmc_send_vary_cookie_header(): void
     {
         if (!headers_sent()) {
             header('Vary: Cookie', false);
